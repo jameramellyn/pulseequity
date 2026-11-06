@@ -164,6 +164,11 @@ await page.screenshot({ path: `${SHOTS}/5-keyboard.png`, fullPage: true });
 await page.setViewportSize({ width: 390, height: 844 });
 const strip = page.getByRole("link", { name: /View result/ });
 check("mobile status strip shows concern level near top", (await strip.isVisible()) && (await strip.innerText()).includes("Elevated concern") && (await strip.boundingBox()).y < 400);
+const mobileCards = page.locator("section#dashboard ul li").filter({ hasText: "Intake evidence:" });
+check("mobile shows findings as stacked cards (table hidden)", (await mobileCards.count()) === 2 && (await mobileCards.first().innerText()).includes("Source: AHA") && !(await page.locator("section#dashboard table").isVisible()));
+check("copy summary sits in the panel header", await page.locator("section#dashboard > div").first().getByRole("button", { name: "Copy summary" }).isVisible());
+await page.locator("section#dashboard").scrollIntoViewIfNeeded();
+await page.screenshot({ path: `${SHOTS}/7-mobile-findings.png`, fullPage: true });
 await page.screenshot({ path: `${SHOTS}/6-mobile.png` });
 await page.setViewportSize({ width: 1280, height: 1000 });
 

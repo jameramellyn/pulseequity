@@ -69,10 +69,13 @@ export default function AlertDashboard({ state, canRetry, onRetry }: Props) {
       aria-labelledby="dashboard-heading"
       className="scroll-mt-24 rounded-sm border border-slate-300 bg-white"
     >
-      <div className="border-b border-slate-200 bg-slate-100 px-3 py-1.5">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-100 px-3 py-1.5">
         <h2 id="dashboard-heading" className={sectionHeaderClass}>
           Clinical decision support
         </h2>
+        {state.kind === "result" && (
+          <CopySummaryButton key={`${state.source}:${state.fixtureId ?? ""}:${state.data.summary}`} state={state} />
+        )}
       </div>
       <div className="p-3" aria-live="polite" aria-busy={state.kind === "loading"}>
         <DashboardBody state={state} canRetry={canRetry} onRetry={onRetry} />
@@ -138,41 +141,17 @@ function ResultView({ state }: { state: Extract<DashboardState, { kind: "result"
   const { data, source, fixtureId, missing, latencyMs } = state;
   const concern = CONCERN_DISPLAY[data.concernLevel];
   const citedIds = [...new Set(data.detectedMarkers.flatMap((m) => m.sourceIds))];
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const SourceIcon = source === "fixture" ? Icons.fixture : Icons.live;
-
-  async function copySummary() {
-    try {
-      await navigator.clipboard.writeText(buildSummaryText(data, { source, missing }));
-      setCopyStatus("copied");
-    } catch {
-      setCopyStatus("failed");
-    }
-    setTimeout(() => setCopyStatus("idle"), 2500);
-  }
 
   return (
     <div className="flex flex-col gap-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <p className="flex items-center gap-1.5 rounded-sm border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
           <SourceIcon size={13} aria-hidden="true" />
           {source === "fixture"
             ? `${FIXTURE_LABEL} (${getCase(fixtureId ?? "")?.label ?? fixtureId})`
             : `Live Claude response${latencyMs !== undefined ? ` · ${(latencyMs / 1000).toFixed(1)} s` : ""}`}
         </p>
-        <span className="flex items-center gap-2">
-          <span role="status" className="text-xs text-slate-600">
-            {copyStatus === "copied" ? "Summary copied" : copyStatus === "failed" ? "Copy failed — select text manually" : ""}
-          </span>
-          <button
-            type="button"
-            onClick={copySummary}
-            className="flex items-center gap-1 rounded-sm border border-slate-400 bg-white px-2 py-0.5 text-xs font-medium text-slate-800 hover:bg-slate-100"
-          >
-            {copyStatus === "copied" ? <Icons.check size={13} aria-hidden="true" /> : <Icons.copy size={13} aria-hidden="true" />}
-            Copy summary
-          </button>
-        </span>
       </div>
 
       <div className={`rounded-sm border-l-[6px] px-3 py-3 ${concern.panel}`}>
@@ -196,7 +175,27 @@ function ResultView({ state }: { state: Extract<DashboardState, { kind: "result"
         {data.detectedMarkers.length === 0 ? (
           <p className="mt-1 text-slate-700">None identified against the supplied references.</p>
         ) : (
-          <div className="mt-1.5 overflow-x-auto">
+          <>
+          <ul className="mt-1.5 flex flex-col gap-2 sm:hidden">
+            {data.detectedMarkers.map((m, i) => (
+              <li key={i} className={`rounded-sm border border-l-4 border-slate-200 px-3 py-2 text-xs ${concern.accent}`}>
+                <p className="text-sm font-semibold text-slate-900">{m.marker}</p>
+                <p className="mt-0.5 leading-relaxed text-slate-700">{m.explanation}</p>
+                <p className="mt-1.5 text-slate-600">
+                  Intake evidence: <q className="font-mono text-[11px] text-slate-800">{stripQuotes(m.inputEvidence)}</q>
+                </p>
+                <p className="mt-1 text-slate-600">
+                  Source:{" "}
+                  {m.sourceIds.map((id) => (
+                    <abbr key={id} title={getReference(id)?.title ?? id} className="mr-1 no-underline">
+                      {sourceLabel(id)}
+                    </abbr>
+                  ))}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-1.5 hidden overflow-x-auto sm:block">
             <table className="w-full border-collapse text-left text-xs">
               <caption className="sr-only">Findings linked to submitted intake evidence and reference sources</caption>
               <thead>
@@ -228,6 +227,7 @@ function ResultView({ state }: { state: Extract<DashboardState, { kind: "result"
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
@@ -273,4 +273,35 @@ function ResultView({ state }: { state: Extract<DashboardState, { kind: "result"
 /** Evidence often arrives already quoted; <q> adds its own quotation marks. */
 function stripQuotes(text: string): string {
   return text.replace(/^["“'‘]+|["”'’]+$/g, "").trim() || text;
+}
+
+/** Header action: copies a plain-text note of the current result. Rendered only when a result exists. */
+function CopySummaryButton({ state }: { state: Extract<DashboardState, { kind: "result" }> }) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function copySummary() {
+    try {
+      await navigator.clipboard.writeText(buildSummaryText(state.data, { source: state.source, missing: state.missing }));
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    setTimeout(() => setCopyStatus("idle"), 2500);
+  }
+
+  return (
+    <span className="flex items-center gap-2">
+      <span role="status" className="text-xs text-slate-600">
+        {copyStatus === "copied" ? "Summary copied" : copyStatus === "failed" ? "Copy failed — select text manually" : ""}
+      </span>
+      <button
+        type="button"
+        onClick={copySummary}
+        className="flex items-center gap-1 rounded-sm border border-slate-400 bg-white px-2 py-0.5 text-xs font-medium text-slate-800 hover:bg-slate-50"
+      >
+        {copyStatus === "copied" ? <Icons.check size={13} aria-hidden="true" /> : <Icons.copy size={13} aria-hidden="true" />}
+        Copy summary
+      </button>
+    </span>
+  );
 }
