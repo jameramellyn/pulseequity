@@ -25,6 +25,8 @@ Action wording must stay within supplied source support and clinician authority.
 If test-specific action guidance is absent, acknowledge that limit and recommend
 clinician review under local protocol without inventing the missing protocol.
 
+Workflow scope: this intake form is used for alert, verbal adult women at triage intake. The form does not collect sex separately; do not list missing sex as a limitation.
+
 Field guidance:
 - concernLevel describes this prototype's findings against the references, not clinical acuity. Never describe a result as safe, cleared, non-urgent, or all clear.
 - Use insufficient_information when the submitted information is too sparse to check against the references.

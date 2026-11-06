@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "check:model": "node --env-file-if-exists=.env.local scripts/check-model.mjs"
+    "check:model": "node --env-file-if-exists=.env.local scripts/check-model.mjs",
+    "test:ui": "node tests/e2e/ui.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "playwright-core": "^1.65.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.1.0"

@@ -31,13 +31,13 @@ const CONCERN_DISPLAY: Record<
   elevated_concern: {
     icon: "▲",
     title: "Elevated concern — reference-listed markers found",
-    detail: "Multiple submitted findings match symptoms in the reference context.",
+    detail: "Category describes this prototype's findings against its references, not clinical acuity.",
     className: "border-red-700 bg-red-50 text-red-950",
   },
   possible_concern: {
     icon: "◆",
     title: "Possible concern — some reference-listed markers found",
-    detail: "Some submitted findings match symptoms in the reference context.",
+    detail: "Category describes this prototype's findings against its references, not clinical acuity.",
     className: "border-amber-600 bg-amber-50 text-amber-950",
   },
   no_specific_markers_identified: {
@@ -150,7 +150,7 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
                 <p className="font-medium text-slate-900">• {m.marker}</p>
                 <p className="text-slate-700">{m.explanation}</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Intake evidence: <q>{m.inputEvidence}</q> · Source: {m.sourceIds.join(", ")}
+                  Intake evidence: <q>{stripQuotes(m.inputEvidence)}</q> · Source: {m.sourceIds.join(", ")}
                 </p>
               </li>
             ))}
@@ -195,4 +195,9 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
       )}
     </div>
   );
+}
+
+/** Evidence often arrives already quoted; <q> adds its own quotation marks. */
+function stripQuotes(text: string): string {
+  return text.replace(/^["“'‘]+|["”'’]+$/g, "").trim() || text;
 }
