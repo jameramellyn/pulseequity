@@ -1,7 +1,7 @@
 // Browser check of UI state handling with a MOCKED /api/analyze (no Claude calls, no cost).
 // Requires Google Chrome installed and the app running: `npm run build && npm start`, then `npm run test:ui`.
 import { chromium } from "playwright-core";
-const URL = process.env.PE_URL ?? "http://localhost:3000/";
+const URL = process.env.PE_URL ?? "http://localhost:3000/triage";
 const SHOTS = process.env.PE_SHOTS ?? "/tmp";
 const results = [];
 const check = (name, ok, extra = "") => { results.push({ name, ok }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  — " + extra : ""}`); };

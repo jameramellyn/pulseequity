@@ -42,6 +42,3 @@ next-env.d.ts
 
 # allow committing the placeholder-only example
 !.env.example
-
-# landing page draft — unverified citations, keep local until reviewed
-/app/landing/

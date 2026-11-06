@@ -34,13 +34,13 @@ Requires Node 20+ (developed on Node 24) and npm.
 npm install
 cp .env.example .env.local      # then edit .env.local (never commit it)
 npm run check:model             # confirms CLAUDE_MODEL is accessible to your key
-npm run dev                     # http://localhost:3000
+npm run dev                     # landing page at http://localhost:3000, triage tool at /triage
 ```
 
 Production build:
 
 ```bash
-npm run build && npm start      # http://localhost:3000
+npm run build && npm start      # landing page at http://localhost:3000, triage tool at /triage
 ```
 
 ### Environment variables (server-only)
@@ -75,7 +75,7 @@ npm run typecheck    # next typegen + tsc
 npm run lint
 npm run build
 npm run test:ui      # 26 headless-Chrome checks against a running app, /api/analyze MOCKED (no cost)
-                     #   e.g. PE_URL=http://localhost:3000/ npm run test:ui
+                     #   e.g. PE_URL=http://localhost:3000/triage npm run test:ui
 ```
 
 `test:ui` needs Google Chrome installed and the app already running.
