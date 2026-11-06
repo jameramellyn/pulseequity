@@ -74,7 +74,7 @@ npm test             # Vitest: contracts, server pipeline, stale-response guards
 npm run typecheck    # next typegen + tsc
 npm run lint
 npm run build
-npm run test:ui      # headless Chrome against a running app, with /api/analyze MOCKED (no cost)
+npm run test:ui      # 26 headless-Chrome checks against a running app, /api/analyze MOCKED (no cost)
                      #   e.g. PE_URL=http://localhost:3000/ npm run test:ui
 ```
 
@@ -91,6 +91,9 @@ lib/intake-form.ts           form ↔ intake conversion (blank → null, unknown
 lib/request-tracker.ts       request ID + generation + AbortController + snapshot/mode guard
 lib/analyze-client.ts        browser fetch with 25 s deadline; validates response shape
 lib/fixtures.ts              three synthetic cases + illustrative prewritten results
+lib/summary.ts               plain-text note for the "Copy summary" button
+lib/entry-ranges.ts          non-blocking data-entry typo hints (not clinical thresholds)
+lib/version.ts               app version + last-updated date shown in the footer
 lib/references.ts            versioned reference inventory
 lib/server/prompt.ts         trusted system prompt, reference context, output contract, delimited intake
 lib/server/claude.ts         one Claude call: maxRetries 0, 20 s deadline, stop-reason/schema/source checks
@@ -165,6 +168,11 @@ model → 503, malformed JSON → 400) were also checked live.
   displayed in the app.
 - **Runtime configuration.** The model, key, hosting account, and final visual design are your
   choices. API credits do not guarantee model access; use `npm run check:model`.
+- **Data-entry hints.** The vital-sign fields show a non-blocking "Value outside usual entry range —
+  confirm if correct" note (and a swapped-BP hint) to catch typos. The bounds in
+  `lib/entry-ranges.ts` (HR 20–300, SBP 40–300, DBP 20–200, RR 4–80) were chosen for this demo as
+  very wide typo bounds. They are **not** sourced clinical thresholds or normal ranges, never block
+  submission, and are not sent to the model.
 - **Single reference.** Symptoms outside the paraphrase (e.g., lightheadedness) are not covered;
   "no specific markers" means only that.
 - The intake form shows this prototype's internal contract; it does not show that any EHR supplies

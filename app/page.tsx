@@ -4,6 +4,9 @@ import { useRef, useState } from "react";
 import AlertDashboard, { type DashboardState } from "@/components/AlertDashboard";
 import CaseSelector from "@/components/CaseSelector";
 import IntakeForm from "@/components/IntakeForm";
+import PatientBanner from "@/components/PatientBanner";
+import StatusStrip from "@/components/StatusStrip";
+import { SegmentedRadio, sectionHeaderClass } from "@/components/ui";
 import { requestAnalysis } from "@/lib/analyze-client";
 import { fixtureResultFor, getCase } from "@/lib/fixtures";
 import {
@@ -15,7 +18,9 @@ import {
   type FieldErrors,
   type IntakeFormValues,
 } from "@/lib/intake-form";
+import { REFERENCE_INVENTORY_VERSION } from "@/lib/references";
 import { RequestTracker, type Mode } from "@/lib/request-tracker";
+import { APP_VERSION, LAST_UPDATED } from "@/lib/version";
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("live");
@@ -132,67 +137,59 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-slate-300 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">PulseEquity</h1>
-            <p className="text-xs text-slate-600">
-              Parallel check for female-pattern cardiac presentations at triage intake · clinician-facing prototype
-            </p>
-          </div>
-          <p className="rounded-md border-2 border-purple-700 bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-purple-900">
-            Synthetic demo · not clinical software · no real patient data
+      <header className="bg-navy-900 text-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+          <h1 className="text-base font-bold tracking-tight">PulseEquity</h1>
+          <span className="rounded-sm border border-white/50 px-1.5 py-px text-[10px] font-bold uppercase tracking-wider">
+            Synthetic demo
+          </span>
+          <p className="text-xs text-slate-300">
+            Not clinical software · no real patient data · parallel check for female-pattern cardiac presentations at
+            triage intake
           </p>
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-7xl px-4 pt-3">
-        <p className="rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-800">
+      <PatientBanner values={form} />
+      <StatusStrip state={dash} />
+
+      <div className="mx-auto w-full max-w-7xl px-4 pt-2">
+        <p className="rounded-sm border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800">
           <strong>Out of scope:</strong> unconscious, unresponsive, or severely altered patients. Standard emergency
           processes must never depend on this form or wait for AI output.
         </p>
       </div>
 
-      <main className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4">
-          <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
-            <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Mode</legend>
-            <div className="flex flex-wrap gap-4">
-              {(
-                [
-                  ["live", "Live AI (Claude via server)"],
-                  ["fixture", "Prewritten demo (no AI call)"],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value} className="flex items-center gap-2 text-sm text-slate-900">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value={value}
-                    checked={mode === value}
-                    onChange={() => handleModeChange(value)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <CaseSelector mode={mode} activeCaseId={activeCaseId} onSelect={handleSelectCase} />
-
-          <IntakeForm
-            values={form}
-            errors={errors}
-            mode={mode}
-            pending={pending}
-            onChange={handleFormChange}
-            onSubmit={() => void submitLive(formRef.current)}
-            onCancel={() => clearResult("Request cancelled. (The provider may still finish and bill the call.)")}
-            onReset={handleReset}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-2">
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-2 rounded-sm border border-slate-300 bg-white px-3 py-2">
+          <SegmentedRadio
+            legend={<span className={sectionHeaderClass}>Mode</span>}
+            name="mode"
+            value={mode}
+            options={[
+              { value: "live", label: "Live AI (Claude)" },
+              { value: "fixture", label: "Prewritten demo (no AI)" },
+            ]}
+            onChange={handleModeChange}
+            size="xs"
           />
+          <CaseSelector mode={mode} activeCaseId={activeCaseId} onSelect={handleSelectCase} />
         </div>
+      </div>
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
+      <main className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <IntakeForm
+          values={form}
+          errors={errors}
+          mode={mode}
+          pending={pending}
+          onChange={handleFormChange}
+          onSubmit={() => void submitLive(formRef.current)}
+          onCancel={() => clearResult("Request cancelled. (The provider may still finish and bill the call.)")}
+          onReset={handleReset}
+        />
+
+        <div className="lg:sticky lg:top-3 lg:self-start">
           <AlertDashboard
             state={dash}
             canRetry={mode === "live" && dash.kind === "error" && dash.error.retryable}
@@ -200,6 +197,13 @@ export default function Home() {
           />
         </div>
       </main>
+
+      <footer className="border-t border-slate-300 bg-white">
+        <p className="mx-auto max-w-7xl px-4 py-2 text-xs text-slate-600">
+          PulseEquity v{APP_VERSION} · Reference inventory {REFERENCE_INVENTORY_VERSION} · Last updated {LAST_UPDATED} ·
+          Synthetic demonstration only — not for clinical use.
+        </p>
+      </footer>
     </div>
   );
 }

@@ -14,6 +14,8 @@ export const REFERENCE_INVENTORY_VERSION = "2026-11-06.1";
 
 export interface ReferenceEntry {
   id: string;
+  /** Short display label for the UI (e.g. findings table). Not sent to the model. */
+  shortName: string;
   title: string;
   publisher: string;
   url: string;
@@ -28,6 +30,7 @@ export interface ReferenceEntry {
 export const REFERENCES: readonly ReferenceEntry[] = [
   {
     id: "AHA_SYMPTOMS_WOMEN",
+    shortName: "AHA",
     title: "Heart Attack Symptoms in Women",
     publisher: "American Heart Association",
     url: "https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack/heart-attack-symptoms-in-women",

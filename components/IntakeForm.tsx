@@ -1,8 +1,10 @@
 "use client";
 
+import { softWarnings } from "@/lib/entry-ranges";
 import type { FieldErrors, IntakeFormValues } from "@/lib/intake-form";
 import type { Mode } from "@/lib/request-tracker";
 import type { SmokingStatus, TriState } from "@/lib/schemas";
+import { Icons, InfoTip, Panel, SegmentedRadio, inputClass, type SegmentOption } from "./ui";
 
 interface Props {
   values: IntakeFormValues;
@@ -15,14 +17,7 @@ interface Props {
   onReset: () => void;
 }
 
-type MeasurementKey = "heartRate" | "systolicBP" | "diastolicBP" | "respiratoryRate";
-
-const MEASUREMENTS: { key: MeasurementKey; label: string; unit: string }[] = [
-  { key: "heartRate", label: "Heart rate", unit: "bpm" },
-  { key: "systolicBP", label: "Systolic BP", unit: "mmHg" },
-  { key: "diastolicBP", label: "Diastolic BP", unit: "mmHg" },
-  { key: "respiratoryRate", label: "Respiratory rate", unit: "breaths/min" },
-];
+type VitalKey = "heartRate" | "systolicBP" | "diastolicBP" | "respiratoryRate";
 
 const TRI_FIELDS: { key: "diabetes" | "hypertension" | "priorCardiacHistory"; label: string }[] = [
   { key: "diabetes", label: "Diabetes" },
@@ -30,40 +25,75 @@ const TRI_FIELDS: { key: "diabetes" | "hypertension" | "priorCardiacHistory"; la
   { key: "priorCardiacHistory", label: "Prior cardiac history" },
 ];
 
-const TRI_OPTIONS: { value: TriState; label: string }[] = [
-  { value: "unknown", label: "Unknown" },
+const TRI_OPTIONS: readonly SegmentOption<TriState>[] = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
+  { value: "unknown", label: "Unknown" },
 ];
 
-const SMOKING_OPTIONS: { value: SmokingStatus; label: string }[] = [
-  { value: "unknown", label: "Unknown" },
+const SMOKING_OPTIONS: readonly SegmentOption<SmokingStatus>[] = [
   { value: "current", label: "Current" },
   { value: "former", label: "Former" },
   { value: "never", label: "Never" },
+  { value: "unknown", label: "Unknown" },
 ];
 
-/** Clinical-tool section header: small, uppercase, tracked. */
-export const sectionHeaderClass = "text-xs font-semibold uppercase tracking-wider text-slate-500";
-
-const inputClass =
-  "w-full rounded-md border border-slate-400 bg-white px-2 py-1.5 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
-
-const fieldLabelClass = "mb-1 block text-xs font-medium text-slate-700";
+const labelClass = "text-xs font-medium text-slate-700";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-1 text-xs font-medium text-red-700">
-      ⚠ {message}
+    <p id={id} className="mt-1 flex items-start gap-1 text-xs font-medium text-red-700">
+      <Icons.warning size={13} aria-hidden="true" className="mt-px shrink-0" />
+      {message}
     </p>
   );
 }
+
+function SoftWarning({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="mt-1 flex items-start gap-1 text-xs text-slate-700">
+      <Icons.info size={13} aria-hidden="true" className="mt-px shrink-0 text-slate-500" />
+      {message}
+    </p>
+  );
+}
+
+const describedBy = (...ids: (string | false | undefined)[]) => ids.filter(Boolean).join(" ") || undefined;
 
 export default function IntakeForm({ values, errors, mode, pending, onChange, onSubmit, onCancel, onReset }: Props) {
   const set = <K extends keyof IntakeFormValues>(key: K, v: IntakeFormValues[K]) => onChange({ ...values, [key]: v });
   const setCo = <K extends keyof IntakeFormValues["comorbidities"]>(key: K, v: IntakeFormValues["comorbidities"][K]) =>
     onChange({ ...values, comorbidities: { ...values.comorbidities, [key]: v } });
+  const warnings = softWarnings(values);
+
+  const vitalInput = (key: VitalKey, label: string, unit: string | null, opts: { visibleLabel?: boolean } = {}) => (
+    <div className={opts.visibleLabel === false ? "min-w-0 flex-1" : undefined}>
+      <label htmlFor={key} className={opts.visibleLabel === false ? "sr-only" : `mb-1 block ${labelClass}`}>
+        {label}
+        {unit ? <span className="sr-only"> ({unit})</span> : null}
+      </label>
+      <div className="flex items-center gap-1">
+        <input
+          id={key}
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="—"
+          className={`${inputClass} tabular-nums`}
+          value={values[key]}
+          onChange={(e) => set(key, e.target.value)}
+          aria-invalid={!!errors[key]}
+          aria-describedby={describedBy("vitals-tip", errors[key] && `${key}-error`, warnings[key] && `${key}-warn`)}
+        />
+        {unit ? (
+          <span className="shrink-0 text-xs text-slate-500" aria-hidden="true">
+            {unit}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <form
@@ -72,143 +102,140 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
         e.preventDefault();
         onSubmit();
       }}
-      className="rounded-lg border border-slate-300 bg-white p-4"
       aria-labelledby="intake-heading"
+      className="flex flex-col gap-3"
     >
-      <h2 id="intake-heading" className={`mb-4 ${sectionHeaderClass}`}>
+      <h2 id="intake-heading" className="sr-only">
         Intake
       </h2>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div>
-          <label htmlFor="age" className="mb-1 block text-sm font-medium text-slate-800">
-            Age (years) <span aria-hidden="true">*</span>
-            <span className="sr-only"> required</span>
-          </label>
-          <input
-            id="age"
-            inputMode="numeric"
-            autoComplete="off"
-            className={inputClass}
-            value={values.age}
-            onChange={(e) => set("age", e.target.value)}
-            aria-invalid={!!errors.age}
-            aria-describedby={errors.age ? "age-error" : "age-hint"}
-          />
-          <p id="age-hint" className="mt-1 text-xs text-slate-500">
-            Adults 18–110 (demo scope)
-          </p>
-          <FieldError id="age-error" message={errors.age} />
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <label htmlFor="chiefComplaint" className="mb-1 block text-sm font-medium text-slate-800">
-          Chief complaint <span aria-hidden="true">*</span>
-          <span className="sr-only"> required</span>
-        </label>
-        <textarea
-          id="chiefComplaint"
-          rows={3}
-          maxLength={1000}
-          placeholder="Describe in the patient's own words"
-          className={`${inputClass} leading-relaxed`}
-          value={values.chiefComplaint}
-          onChange={(e) => set("chiefComplaint", e.target.value)}
-          aria-invalid={!!errors.chiefComplaint}
-          aria-describedby={errors.chiefComplaint ? "cc-error" : "cc-hint"}
-        />
-        <p id="cc-hint" className="mt-1 text-xs text-slate-500">
-          Describe in the patient&apos;s own words · {values.chiefComplaint.length}/1000 characters · synthetic text only
-        </p>
-        <FieldError id="cc-error" message={errors.chiefComplaint} />
-      </div>
-
-      <fieldset className="mt-5 border-t border-slate-200 pt-4" aria-describedby="vitals-hint">
-        <legend className={`float-left w-full ${sectionHeaderClass}`}>Vital signs</legend>
-        <p id="vitals-hint" className="clear-both mb-3 pt-1 text-xs text-slate-500">
-          Leave blank if not measured
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {MEASUREMENTS.map((m) => (
-            <div key={m.key}>
-              <label htmlFor={m.key} className={fieldLabelClass}>
-                {m.label} <span className="text-slate-500">({m.unit})</span>
-              </label>
-              <input
-                id={m.key}
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="not measured"
-                className={inputClass}
-                value={values[m.key]}
-                onChange={(e) => set(m.key, e.target.value)}
-                aria-invalid={!!errors[m.key]}
-                aria-describedby={errors[m.key] ? `${m.key}-error` : undefined}
-              />
-              <FieldError id={`${m.key}-error`} message={errors[m.key]} />
-            </div>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="mt-5 border-t border-slate-200 pt-4" aria-describedby="risk-hint">
-        <legend className={`float-left w-full ${sectionHeaderClass}`}>Risk factors</legend>
-        <p id="risk-hint" className="clear-both mb-3 pt-1 text-xs text-slate-500">
-          Unknown is not the same as no
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {TRI_FIELDS.map((f) => (
-            <div key={f.key}>
-              <label htmlFor={f.key} className={fieldLabelClass}>
-                {f.label}
-              </label>
-              <select
-                id={f.key}
-                className={inputClass}
-                value={values.comorbidities[f.key]}
-                onChange={(e) => setCo(f.key, e.target.value as TriState)}
-              >
-                {TRI_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+      <Panel id="panel-complaint" title="Presenting complaint">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
           <div>
-            <label htmlFor="smokingStatus" className={fieldLabelClass}>
-              Smoking
-            </label>
-            <select
-              id="smokingStatus"
-              className={inputClass}
-              value={values.comorbidities.smokingStatus}
-              onChange={(e) => setCo("smokingStatus", e.target.value as SmokingStatus)}
-            >
-              {SMOKING_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <div className="mb-1 flex items-center gap-1">
+              <label htmlFor="age" className={labelClass}>
+                Age (years) <span aria-hidden="true">*</span>
+                <span className="sr-only"> required</span>
+              </label>
+              <InfoTip id="age-tip" label="Age">
+                Adults 18–110 only. This is a demo scope choice, not a clinical threshold.
+              </InfoTip>
+            </div>
+            <input
+              id="age"
+              inputMode="numeric"
+              autoComplete="off"
+              className={`${inputClass} tabular-nums`}
+              value={values.age}
+              onChange={(e) => set("age", e.target.value)}
+              aria-invalid={!!errors.age}
+              aria-describedby={describedBy("age-tip", errors.age && "age-error")}
+            />
+            <FieldError id="age-error" message={errors.age} />
+          </div>
+          <div>
+            <div className="mb-1 flex items-center gap-1">
+              <label htmlFor="chiefComplaint" className={labelClass}>
+                Chief complaint <span aria-hidden="true">*</span>
+                <span className="sr-only"> required</span>
+              </label>
+              <InfoTip id="cc-tip" label="Chief complaint">
+                Describe in the patient&apos;s own words. Synthetic text only; up to 1000 characters.
+              </InfoTip>
+              {values.chiefComplaint.length > 800 && (
+                <span className="ml-auto text-xs text-slate-500">{values.chiefComplaint.length}/1000</span>
+              )}
+            </div>
+            <textarea
+              id="chiefComplaint"
+              rows={3}
+              maxLength={1000}
+              placeholder="Describe in the patient's own words"
+              className={`${inputClass} leading-relaxed`}
+              value={values.chiefComplaint}
+              onChange={(e) => set("chiefComplaint", e.target.value)}
+              aria-invalid={!!errors.chiefComplaint}
+              aria-describedby={describedBy("cc-tip", errors.chiefComplaint && "cc-error")}
+            />
+            <FieldError id="cc-error" message={errors.chiefComplaint} />
           </div>
         </div>
-        <FieldError id="co-error" message={errors.comorbidities} />
-      </fieldset>
+      </Panel>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">
+      <Panel
+        id="panel-vitals"
+        title="Vital signs"
+        aside={
+          <InfoTip id="vitals-tip" label="Vital signs">
+            Leave blank if not measured. Blank is sent as &quot;not measured&quot;, never as zero. Range notes only flag
+            possible typos; they are not clinical interpretation and do not block submission.
+          </InfoTip>
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)_minmax(0,1fr)]">
+          <div>
+            {vitalInput("heartRate", "Heart rate", "bpm")}
+            <FieldError id="heartRate-error" message={errors.heartRate} />
+            <SoftWarning id="heartRate-warn" message={warnings.heartRate} />
+          </div>
+          <fieldset>
+            <legend className={`mb-1 ${labelClass}`}>Blood pressure</legend>
+            <div className="flex items-center gap-1">
+              {vitalInput("systolicBP", "Systolic BP", null, { visibleLabel: false })}
+              <span className="text-slate-500" aria-hidden="true">
+                /
+              </span>
+              {vitalInput("diastolicBP", "Diastolic BP", null, { visibleLabel: false })}
+              <span className="shrink-0 text-xs text-slate-500">mmHg</span>
+            </div>
+            <FieldError id="systolicBP-error" message={errors.systolicBP} />
+            <FieldError id="diastolicBP-error" message={errors.diastolicBP} />
+            <SoftWarning id="systolicBP-warn" message={warnings.systolicBP} />
+            <SoftWarning id="diastolicBP-warn" message={warnings.diastolicBP} />
+          </fieldset>
+          <div>
+            {vitalInput("respiratoryRate", "Respiratory rate", "/min")}
+            <FieldError id="respiratoryRate-error" message={errors.respiratoryRate} />
+            <SoftWarning id="respiratoryRate-warn" message={warnings.respiratoryRate} />
+          </div>
+        </div>
+      </Panel>
+
+      <Panel id="panel-risk" title="Risk factors / comorbidities">
+        <p className="mb-3 text-xs font-medium text-slate-700">Unknown is not the same as no.</p>
+        <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+          {TRI_FIELDS.map((f) => (
+            <SegmentedRadio
+              key={f.key}
+              legend={f.label}
+              name={f.key}
+              value={values.comorbidities[f.key]}
+              options={TRI_OPTIONS}
+              onChange={(v) => setCo(f.key, v)}
+            />
+          ))}
+          <SegmentedRadio
+            legend="Smoking"
+            name="smokingStatus"
+            value={values.comorbidities.smokingStatus}
+            options={SMOKING_OPTIONS}
+            onChange={(v) => setCo("smokingStatus", v)}
+          />
+        </div>
+        <FieldError id="co-error" message={errors.comorbidities} />
+      </Panel>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-sm border border-slate-300 bg-white px-3 py-2">
         {mode === "live" ? (
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="rounded-sm bg-navy-800 px-4 py-1.5 text-sm font-semibold text-white hover:bg-navy-900 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             {pending ? "Running…" : "Run cardiac check"}
           </button>
         ) : (
-          <p className="text-sm text-slate-700">
+          <p className="text-xs text-slate-700">
             Prewritten mode shows responses only for unedited predefined cases. Switch to <strong>Live AI</strong> to analyze
             other input.
           </p>
@@ -217,7 +244,7 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-slate-400 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+            className="rounded-sm border border-slate-400 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-100"
           >
             Cancel
           </button>
@@ -225,7 +252,7 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
         <button
           type="button"
           onClick={onReset}
-          className="rounded-md border border-slate-400 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+          className="ml-auto rounded-sm border border-slate-400 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-100"
         >
           Reset form
         </button>

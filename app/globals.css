@@ -1,13 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f1f3f6;
   --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Neutral chrome: navy + greys. Colour is reserved for the concern level. */
+  --color-navy-50: #eef2f8;
+  --color-navy-700: #2a3d63;
+  --color-navy-800: #1f2f4f;
+  --color-navy-900: #15213a;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 

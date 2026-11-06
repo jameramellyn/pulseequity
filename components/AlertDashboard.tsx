@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { ClientError } from "@/lib/analyze-client";
 import { FIXTURE_LABEL, getCase } from "@/lib/fixtures";
 import { getReference } from "@/lib/references";
 import type { AnalysisResult, ConcernLevel } from "@/lib/schemas";
-import { sectionHeaderClass } from "./IntakeForm";
+import { CONCERN_LABELS, buildSummaryText, sourceLabel } from "@/lib/summary";
+import { Icons, sectionHeaderClass } from "./ui";
 
 export type DashboardState =
   | { kind: "idle"; note?: string }
@@ -25,50 +27,57 @@ interface Props {
   onRetry: () => void;
 }
 
-const CONCERN_DISPLAY: Record<
+/** Colour is reserved for the concern level. */
+export const CONCERN_DISPLAY: Record<
   ConcernLevel,
-  { icon: string; title: string; detail: string; className: string; accent: string }
+  { Icon: (typeof Icons)[keyof typeof Icons]; short: string; detail: string; panel: string; accent: string }
 > = {
   elevated_concern: {
-    icon: "▲",
-    title: "Elevated concern — reference-listed markers found",
+    Icon: Icons.elevated,
+    short: "Elevated concern",
     detail: "Category describes this prototype's findings against its references, not clinical acuity.",
-    className: "border-red-700 bg-red-50 text-red-950",
+    panel: "border-red-700 bg-red-50 text-red-950",
     accent: "border-l-red-700",
   },
   possible_concern: {
-    icon: "◆",
-    title: "Possible concern — some reference-listed markers found",
+    Icon: Icons.possible,
+    short: "Possible concern",
     detail: "Category describes this prototype's findings against its references, not clinical acuity.",
-    className: "border-amber-600 bg-amber-50 text-amber-950",
+    panel: "border-amber-600 bg-amber-50 text-amber-950",
     accent: "border-l-amber-600",
   },
   no_specific_markers_identified: {
-    icon: "○",
-    title: "No specific markers identified by this prototype",
+    Icon: Icons.none,
+    short: "No specific markers identified",
     detail: "This does not rule out cardiac disease and does not establish urgency or lack of urgency.",
-    className: "border-slate-500 bg-slate-100 text-slate-900",
+    panel: "border-slate-500 bg-slate-100 text-slate-900",
     accent: "border-l-slate-400",
   },
   insufficient_information: {
-    icon: "?",
-    title: "Insufficient information",
+    Icon: Icons.insufficient,
+    short: "Insufficient information",
     detail: "The submitted intake was too limited for this prototype to check against its references.",
-    className: "border-slate-500 bg-slate-100 text-slate-900",
+    panel: "border-slate-500 bg-slate-100 text-slate-900",
     accent: "border-l-slate-400",
   },
 };
 
 export default function AlertDashboard({ state, canRetry, onRetry }: Props) {
   return (
-    <section aria-labelledby="dashboard-heading" className="rounded-lg border border-slate-300 bg-white p-4">
-      <h2 id="dashboard-heading" className={`mb-4 ${sectionHeaderClass}`}>
-        Clinical decision support
-      </h2>
-      <div aria-live="polite" aria-busy={state.kind === "loading"}>
+    <section
+      id="dashboard"
+      aria-labelledby="dashboard-heading"
+      className="scroll-mt-24 rounded-sm border border-slate-300 bg-white"
+    >
+      <div className="border-b border-slate-200 bg-slate-100 px-3 py-1.5">
+        <h2 id="dashboard-heading" className={sectionHeaderClass}>
+          Clinical decision support
+        </h2>
+      </div>
+      <div className="p-3" aria-live="polite" aria-busy={state.kind === "loading"}>
         <DashboardBody state={state} canRetry={canRetry} onRetry={onRetry} />
       </div>
-      <p className="mt-4 border-t border-slate-200 pt-3 text-xs text-slate-600">
+      <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-600">
         Supplements clinician judgment. Does not diagnose, rule out disease, assign ESI, order tests, or route patients.
         Synthetic demonstration only.
       </p>
@@ -80,7 +89,12 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
   if (state.kind === "idle") {
     return (
       <div className="text-sm text-slate-700">
-        {state.note ? <p className="mb-2 font-medium text-slate-900">ℹ {state.note}</p> : null}
+        {state.note ? (
+          <p className="mb-2 flex items-start gap-1.5 font-medium text-slate-900">
+            <Icons.info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-slate-500" />
+            {state.note}
+          </p>
+        ) : null}
         <p>Select a patient scenario or complete the intake to see decision support.</p>
       </div>
     );
@@ -89,7 +103,7 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
   if (state.kind === "loading") {
     return (
       <p className="flex items-center gap-2 text-sm text-slate-800">
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-700 border-t-transparent" aria-hidden="true" />
+        <Icons.loading size={16} aria-hidden="true" className="animate-spin text-navy-800" />
         Analyzing with live Claude… Standard triage must not wait for this tool.
       </p>
     );
@@ -97,15 +111,18 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
 
   if (state.kind === "error") {
     return (
-      <div role="alert" className="rounded-md border-2 border-red-700 bg-red-50 p-3 text-sm text-red-950">
-        <p className="font-semibold">✕ Analysis unavailable ({state.error.code})</p>
+      <div role="alert" className="rounded-sm border border-red-700 bg-red-50 p-3 text-sm text-red-950">
+        <p className="flex items-center gap-1.5 font-semibold">
+          <Icons.error size={16} aria-hidden="true" />
+          Analysis unavailable ({state.error.code})
+        </p>
         <p className="mt-1">{state.error.message}</p>
         <p className="mt-1 text-xs">No alert is shown. Nothing was substituted for the live result.</p>
         {canRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="mt-3 rounded-md bg-red-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-900"
+            className="mt-3 rounded-sm bg-navy-800 px-3 py-1 text-sm font-semibold text-white hover:bg-navy-900"
           >
             Retry
           </button>
@@ -114,36 +131,62 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
     );
   }
 
+  return <ResultView state={state} />;
+}
+
+function ResultView({ state }: { state: Extract<DashboardState, { kind: "result" }> }) {
   const { data, source, fixtureId, missing, latencyMs } = state;
   const concern = CONCERN_DISPLAY[data.concernLevel];
   const citedIds = [...new Set(data.detectedMarkers.flatMap((m) => m.sourceIds))];
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const SourceIcon = source === "fixture" ? Icons.fixture : Icons.live;
+
+  async function copySummary() {
+    try {
+      await navigator.clipboard.writeText(buildSummaryText(data, { source, missing }));
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    setTimeout(() => setCopyStatus("idle"), 2500);
+  }
 
   return (
-    <div className="flex flex-col gap-4 text-sm">
-      <p
-        className={`rounded px-2 py-1 text-xs font-semibold ${
-          source === "fixture" ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"
-        }`}
-      >
-        {source === "fixture"
-          ? `${FIXTURE_LABEL} (${getCase(fixtureId ?? "")?.label ?? fixtureId})`
-          : `Live Claude response${latencyMs !== undefined ? ` · ${(latencyMs / 1000).toFixed(1)} s` : ""}`}
-      </p>
-
-      <div className={`rounded-lg border-l-[12px] px-5 py-5 ${concern.className}`}>
-        <p className="flex items-start gap-3 text-2xl font-bold leading-tight">
-          <span aria-hidden="true" className="shrink-0">
-            {concern.icon}
-          </span>
-          <span>{concern.title}</span>
+    <div className="flex flex-col gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 rounded-sm border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
+          <SourceIcon size={13} aria-hidden="true" />
+          {source === "fixture"
+            ? `${FIXTURE_LABEL} (${getCase(fixtureId ?? "")?.label ?? fixtureId})`
+            : `Live Claude response${latencyMs !== undefined ? ` · ${(latencyMs / 1000).toFixed(1)} s` : ""}`}
         </p>
-        <p className="mt-2 text-xs">{concern.detail}</p>
-        <p className="mt-3 text-base leading-relaxed">{data.summary}</p>
+        <span className="flex items-center gap-2">
+          <span role="status" className="text-xs text-slate-600">
+            {copyStatus === "copied" ? "Summary copied" : copyStatus === "failed" ? "Copy failed — select text manually" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={copySummary}
+            className="flex items-center gap-1 rounded-sm border border-slate-400 bg-white px-2 py-0.5 text-xs font-medium text-slate-800 hover:bg-slate-100"
+          >
+            {copyStatus === "copied" ? <Icons.check size={13} aria-hidden="true" /> : <Icons.copy size={13} aria-hidden="true" />}
+            Copy summary
+          </button>
+        </span>
       </div>
 
-      <div className="rounded-md border-2 border-blue-800 bg-blue-50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-blue-900">Recommended next step</p>
-        <p className="mt-1 text-base font-semibold text-slate-900">{data.recommendedAction}</p>
+      <div className={`rounded-sm border-l-[6px] px-3 py-3 ${concern.panel}`}>
+        <p className="flex items-center gap-2 text-lg font-bold leading-snug">
+          <concern.Icon size={20} aria-hidden="true" className="shrink-0" />
+          {CONCERN_LABELS[data.concernLevel]}
+        </p>
+        <p className="mt-1 text-xs">{concern.detail}</p>
+        <p className="mt-2 leading-relaxed">{data.summary}</p>
+      </div>
+
+      <div className="rounded-sm border border-slate-300 border-l-4 border-l-navy-800 bg-slate-50 px-3 py-2">
+        <p className={sectionHeaderClass}>Recommended next step</p>
+        <p className="mt-0.5 text-base font-semibold text-slate-900">{data.recommendedAction}</p>
       </div>
 
       <hr className="border-slate-200" />
@@ -153,27 +196,46 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
         {data.detectedMarkers.length === 0 ? (
           <p className="mt-1 text-slate-700">None identified against the supplied references.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-2">
-            {data.detectedMarkers.map((m, i) => (
-              <li key={i} className={`rounded border border-l-4 border-slate-200 py-2 pl-3 pr-2 ${concern.accent}`}>
-                <p className="font-semibold text-slate-900">{m.marker}</p>
-                <p className="leading-relaxed text-slate-700">{m.explanation}</p>
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Intake evidence:{" "}
-                  <q className="rounded bg-slate-100 px-1 font-mono text-[11px] text-slate-800">{stripQuotes(m.inputEvidence)}</q>
-                  {" "}· Source: {m.sourceIds.join(", ")}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-1.5 overflow-x-auto">
+            <table className="w-full border-collapse text-left text-xs">
+              <caption className="sr-only">Findings linked to submitted intake evidence and reference sources</caption>
+              <thead>
+                <tr className="border-b border-slate-300 text-slate-600">
+                  <th scope="col" className="py-1 pl-2 pr-2 font-semibold">Marker</th>
+                  <th scope="col" className="py-1 pr-2 font-semibold">Intake evidence</th>
+                  <th scope="col" className="py-1 pr-1 font-semibold">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.detectedMarkers.map((m, i) => (
+                  <tr key={i} className="border-b border-slate-200 align-top">
+                    <td className={`border-l-4 py-1.5 pl-2 pr-2 ${concern.accent}`}>
+                      <span className="block text-sm font-semibold text-slate-900">{m.marker}</span>
+                      <span className="block leading-relaxed text-slate-700">{m.explanation}</span>
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <q className="font-mono text-[11px] text-slate-800">{stripQuotes(m.inputEvidence)}</q>
+                    </td>
+                    <td className="whitespace-nowrap py-1.5 pr-1 text-slate-700">
+                      {m.sourceIds.map((id) => (
+                        <abbr key={id} title={getReference(id)?.title ?? id} className="mr-1 no-underline">
+                          {sourceLabel(id)}
+                        </abbr>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {data.potentialDismissalPattern && (
-        <div className="rounded border border-amber-500 bg-amber-50 p-2">
-          <h3 className="font-semibold text-amber-950">Possible dismissal pattern</h3>
-          <p className="text-amber-950">{data.potentialDismissalPattern}</p>
-          <p className="mt-1 text-xs text-amber-900">Describes an attribution risk, not proven clinician bias.</p>
+        <div className="rounded-sm border border-slate-300 border-l-4 border-l-slate-500 bg-white px-3 py-2">
+          <h3 className={sectionHeaderClass}>Possible dismissal pattern</h3>
+          <p className="mt-0.5 text-slate-900">{data.potentialDismissalPattern}</p>
+          <p className="mt-1 text-xs text-slate-600">Describes an attribution risk, not proven clinician bias.</p>
         </div>
       )}
 

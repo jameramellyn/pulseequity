@@ -2,6 +2,7 @@
 
 import { SYNTHETIC_CASES } from "@/lib/fixtures";
 import type { Mode } from "@/lib/request-tracker";
+import { Icons, InfoTip, sectionHeaderClass } from "./ui";
 
 interface Props {
   mode: Mode;
@@ -9,37 +10,41 @@ interface Props {
   onSelect: (caseId: string) => void;
 }
 
+/** Compact toolbar group of synthetic patient scenarios. */
 export default function CaseSelector({ mode, activeCaseId, onSelect }: Props) {
   return (
-    <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
-      <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Patient scenarios</legend>
-      <p className="mb-3 text-xs text-slate-600">
-        {mode === "live"
-          ? "Selecting a case loads it into the form and sends it to live Claude immediately."
-          : "Selecting a case loads it and shows its prewritten demo response (no Claude call)."}
-      </p>
-      <div className="flex flex-col gap-2">
-        {SYNTHETIC_CASES.map((c) => {
-          const active = c.id === activeCaseId;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onSelect(c.id)}
-              aria-pressed={active}
-              className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                active ? "border-blue-600 bg-blue-50" : "border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <span className="block font-medium text-slate-900">
-                {active ? "● " : ""}
-                {c.label}
-              </span>
-              <span className="block text-xs text-slate-600">{c.description}</span>
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+    <div role="group" aria-labelledby="scenarios-label" className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="flex items-center gap-1">
+        <span id="scenarios-label" className={sectionHeaderClass}>
+          Patient scenarios
+        </span>
+        <InfoTip id="scenarios-tip" label="Patient scenarios">
+          {mode === "live"
+            ? "Selecting a scenario loads it into the form and sends it to live Claude immediately (a paid API call)."
+            : "Selecting a scenario loads it and shows its prewritten demo response (no Claude call)."}
+        </InfoTip>
+      </span>
+      {SYNTHETIC_CASES.map((c) => {
+        const active = c.id === activeCaseId;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelect(c.id)}
+            aria-pressed={active}
+            aria-describedby="scenarios-tip"
+            title={c.description}
+            className={`flex items-center gap-1 rounded-sm border px-2 py-1 text-xs ${
+              active
+                ? "border-navy-800 bg-navy-50 font-semibold text-navy-900"
+                : "border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+            }`}
+          >
+            {active && <Icons.check size={12} aria-hidden="true" />}
+            {c.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
