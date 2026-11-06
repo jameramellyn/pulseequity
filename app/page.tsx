@@ -5,13 +5,12 @@ import {
   ClipboardList,
   HeartPulse,
   ShieldCheck,
-  Stethoscope,
   TriangleAlert,
 } from "lucide-react";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "PulseEquity — Recognizing women's cardiac presentations at triage",
+  title: "PulseEquity by Jamera Mellyn Fernando · Code with Claude – Women in AI Hackathon",
   description:
     "Hackathon prototype: a provider-facing check that flags female-pattern cardiac presentations at the triage intake window. Synthetic data only; not clinical software.",
 };
@@ -69,9 +68,9 @@ function EcgTrace() {
   return (
     <svg
       viewBox="0 0 1200 200"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="none"
       aria-hidden="true"
-      className="h-40 w-full sm:h-52"
+      className="h-36 w-full sm:h-48"
     >
       <defs>
         <linearGradient id="ecg-fade" x1="0" x2="1" y1="0" y2="0">
@@ -97,6 +96,7 @@ function EcgTrace() {
         strokeOpacity="0.25"
         strokeWidth="2"
         strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
         className="pel-ecgDraw"
       />
       {/* Bright moving sweep */}
@@ -107,6 +107,7 @@ function EcgTrace() {
         stroke="url(#ecg-fade)"
         strokeWidth="3"
         strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
         strokeLinejoin="round"
         filter="url(#ecg-glow)"
         className="pel-ecgSweep"
@@ -215,6 +216,9 @@ export default function LandingPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
+            <a href="#triage" className="hidden hover:text-[#15213a] sm:inline">
+              What is triage?
+            </a>
             <a href="#problem" className="hidden hover:text-[#15213a] sm:inline">
               The problem
             </a>
@@ -245,22 +249,20 @@ export default function LandingPage() {
           />
 
           <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-6 sm:pt-28">
-            <p
-              className="pel-fadeUp inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-rose-700"
-            >
-              <Stethoscope size={14} aria-hidden="true" />
-              Triage decision support · Women&apos;s heart health
-            </p>
             <h1
-              className="pel-fadeUp mt-6 max-w-4xl text-5xl font-bold leading-[1.05] tracking-tight text-[#15213a] sm:text-7xl"
-              style={{ animationDelay: "120ms" }}
+              className="pel-fadeUp max-w-4xl text-6xl font-bold leading-[1.05] tracking-tight sm:text-8xl"
             >
-              Same symptoms.
-              <br />
-              <span className="text-rose-600">Different triage.</span>
+              <span className="text-[#15213a]">Pulse</span>
+              <span className="text-rose-600">Equity</span>
             </h1>
             <p
-              className="pel-fadeUp mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl"
+              className="pel-fadeUp mt-4 text-sm font-medium text-slate-500 sm:text-base"
+              style={{ animationDelay: "120ms" }}
+            >
+              By Jamera Mellyn Fernando · Code with Claude – Women in AI Hackathon
+            </p>
+            <p
+              className="pel-fadeUp mt-8 max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl"
               style={{ animationDelay: "240ms" }}
             >
               PulseEquity is a lightweight, provider-facing check that flags female-pattern cardiac
@@ -291,8 +293,40 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative mt-10 pb-6 sm:mt-14">
             <EcgTrace />
+          </div>
+        </section>
+
+        {/* What is triage? */}
+        <section id="triage" className="scroll-mt-16 bg-white">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 sm:py-24 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-rose-600">
+                New to this?
+              </p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#15213a] sm:text-4xl">
+                What is triage?
+              </h2>
+            </div>
+            <div className="flex flex-col gap-5 text-lg leading-relaxed text-slate-600">
+              <p>
+                When you arrive at an emergency department, the first clinician you usually meet is a
+                triage nurse. They ask what brought you in, check vital signs like heart rate and blood
+                pressure, and decide how urgently you need to be seen. The sickest patients go first;
+                everyone else waits their turn.
+              </p>
+              <p>
+                That decision is made quickly, often before any tests. If a heart attack doesn&apos;t
+                look like the classic picture of crushing chest pain, it can be judged less urgent
+                than it really is, and women&apos;s symptoms are more likely to be read this way{" "}
+                <Cite n={[2, 4]} />.
+              </p>
+              <p className="font-medium text-[#15213a]">
+                PulseEquity works at this first step: it gives the triage nurse a second look at the
+                intake, so a possible heart attack in a woman is less likely to be missed.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -426,7 +460,9 @@ export default function LandingPage() {
           <p className="font-semibold text-slate-600">
             Synthetic hackathon demonstration. Not clinical software. No real patient data.
           </p>
-          <p>© 2026 PulseEquity · Hackathon prototype</p>
+          <p>
+            PulseEquity by Jamera Mellyn Fernando · Code with Claude – Women in AI Hackathon · 2026
+          </p>
         </div>
       </footer>
     </div>
