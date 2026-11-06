@@ -43,8 +43,13 @@ const SMOKING_OPTIONS: { value: SmokingStatus; label: string }[] = [
   { value: "never", label: "Never" },
 ];
 
+/** Clinical-tool section header: small, uppercase, tracked. */
+export const sectionHeaderClass = "text-xs font-semibold uppercase tracking-wider text-slate-500";
+
 const inputClass =
   "w-full rounded-md border border-slate-400 bg-white px-2 py-1.5 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
+
+const fieldLabelClass = "mb-1 block text-xs font-medium text-slate-700";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
@@ -70,8 +75,8 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
       className="rounded-lg border border-slate-300 bg-white p-4"
       aria-labelledby="intake-heading"
     >
-      <h2 id="intake-heading" className="mb-3 text-base font-semibold text-slate-900">
-        Triage intake
+      <h2 id="intake-heading" className={`mb-4 ${sectionHeaderClass}`}>
+        Intake
       </h2>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -99,31 +104,35 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
 
       <div className="mt-3">
         <label htmlFor="chiefComplaint" className="mb-1 block text-sm font-medium text-slate-800">
-          Chief complaint (patient&apos;s words) <span aria-hidden="true">*</span>
+          Chief complaint <span aria-hidden="true">*</span>
           <span className="sr-only"> required</span>
         </label>
         <textarea
           id="chiefComplaint"
           rows={3}
           maxLength={1000}
-          className={inputClass}
+          placeholder="Describe in the patient's own words"
+          className={`${inputClass} leading-relaxed`}
           value={values.chiefComplaint}
           onChange={(e) => set("chiefComplaint", e.target.value)}
           aria-invalid={!!errors.chiefComplaint}
           aria-describedby={errors.chiefComplaint ? "cc-error" : "cc-hint"}
         />
         <p id="cc-hint" className="mt-1 text-xs text-slate-500">
-          {values.chiefComplaint.length}/1000 characters. Synthetic text only.
+          Describe in the patient&apos;s own words · {values.chiefComplaint.length}/1000 characters · synthetic text only
         </p>
         <FieldError id="cc-error" message={errors.chiefComplaint} />
       </div>
 
-      <fieldset className="mt-4">
-        <legend className="mb-1 text-sm font-semibold text-slate-800">Vitals (leave blank if not measured)</legend>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <fieldset className="mt-5 border-t border-slate-200 pt-4" aria-describedby="vitals-hint">
+        <legend className={`float-left w-full ${sectionHeaderClass}`}>Vital signs</legend>
+        <p id="vitals-hint" className="clear-both mb-3 pt-1 text-xs text-slate-500">
+          Leave blank if not measured
+        </p>
+        <div className="grid grid-cols-2 gap-3">
           {MEASUREMENTS.map((m) => (
             <div key={m.key}>
-              <label htmlFor={m.key} className="mb-1 block text-xs font-medium text-slate-700">
+              <label htmlFor={m.key} className={fieldLabelClass}>
                 {m.label} <span className="text-slate-500">({m.unit})</span>
               </label>
               <input
@@ -143,12 +152,15 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
         </div>
       </fieldset>
 
-      <fieldset className="mt-4">
-        <legend className="mb-1 text-sm font-semibold text-slate-800">Risk factors (unknown is not the same as no)</legend>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <fieldset className="mt-5 border-t border-slate-200 pt-4" aria-describedby="risk-hint">
+        <legend className={`float-left w-full ${sectionHeaderClass}`}>Risk factors</legend>
+        <p id="risk-hint" className="clear-both mb-3 pt-1 text-xs text-slate-500">
+          Unknown is not the same as no
+        </p>
+        <div className="grid grid-cols-2 gap-3">
           {TRI_FIELDS.map((f) => (
             <div key={f.key}>
-              <label htmlFor={f.key} className="mb-1 block text-xs font-medium text-slate-700">
+              <label htmlFor={f.key} className={fieldLabelClass}>
                 {f.label}
               </label>
               <select
@@ -166,7 +178,7 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
             </div>
           ))}
           <div>
-            <label htmlFor="smokingStatus" className="mb-1 block text-xs font-medium text-slate-700">
+            <label htmlFor="smokingStatus" className={fieldLabelClass}>
               Smoking
             </label>
             <select
@@ -186,14 +198,14 @@ export default function IntakeForm({ values, errors, mode, pending, onChange, on
         <FieldError id="co-error" message={errors.comorbidities} />
       </fieldset>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">
         {mode === "live" ? (
           <button
             type="submit"
             disabled={pending}
             className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {pending ? "Analyzing…" : "Analyze with live Claude"}
+            {pending ? "Running…" : "Run cardiac check"}
           </button>
         ) : (
           <p className="text-sm text-slate-700">

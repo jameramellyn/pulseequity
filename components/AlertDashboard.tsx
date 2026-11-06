@@ -4,6 +4,7 @@ import type { ClientError } from "@/lib/analyze-client";
 import { FIXTURE_LABEL, getCase } from "@/lib/fixtures";
 import { getReference } from "@/lib/references";
 import type { AnalysisResult, ConcernLevel } from "@/lib/schemas";
+import { sectionHeaderClass } from "./IntakeForm";
 
 export type DashboardState =
   | { kind: "idle"; note?: string }
@@ -26,39 +27,43 @@ interface Props {
 
 const CONCERN_DISPLAY: Record<
   ConcernLevel,
-  { icon: string; title: string; detail: string; className: string }
+  { icon: string; title: string; detail: string; className: string; accent: string }
 > = {
   elevated_concern: {
     icon: "▲",
     title: "Elevated concern — reference-listed markers found",
     detail: "Category describes this prototype's findings against its references, not clinical acuity.",
     className: "border-red-700 bg-red-50 text-red-950",
+    accent: "border-l-red-700",
   },
   possible_concern: {
     icon: "◆",
     title: "Possible concern — some reference-listed markers found",
     detail: "Category describes this prototype's findings against its references, not clinical acuity.",
     className: "border-amber-600 bg-amber-50 text-amber-950",
+    accent: "border-l-amber-600",
   },
   no_specific_markers_identified: {
     icon: "○",
     title: "No specific markers identified by this prototype",
     detail: "This does not rule out cardiac disease and does not establish urgency or lack of urgency.",
     className: "border-slate-500 bg-slate-100 text-slate-900",
+    accent: "border-l-slate-400",
   },
   insufficient_information: {
     icon: "?",
     title: "Insufficient information",
     detail: "The submitted intake was too limited for this prototype to check against its references.",
     className: "border-slate-500 bg-slate-100 text-slate-900",
+    accent: "border-l-slate-400",
   },
 };
 
 export default function AlertDashboard({ state, canRetry, onRetry }: Props) {
   return (
     <section aria-labelledby="dashboard-heading" className="rounded-lg border border-slate-300 bg-white p-4">
-      <h2 id="dashboard-heading" className="mb-3 text-base font-semibold text-slate-900">
-        Decision-support alert
+      <h2 id="dashboard-heading" className={`mb-4 ${sectionHeaderClass}`}>
+        Clinical decision support
       </h2>
       <div aria-live="polite" aria-busy={state.kind === "loading"}>
         <DashboardBody state={state} canRetry={canRetry} onRetry={onRetry} />
@@ -76,7 +81,7 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
     return (
       <div className="text-sm text-slate-700">
         {state.note ? <p className="mb-2 font-medium text-slate-900">ℹ {state.note}</p> : null}
-        <p>Select a synthetic case or complete the intake form to see an alert.</p>
+        <p>Select a patient scenario or complete the intake to see decision support.</p>
       </div>
     );
   }
@@ -114,7 +119,7 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
   const citedIds = [...new Set(data.detectedMarkers.flatMap((m) => m.sourceIds))];
 
   return (
-    <div className="flex flex-col gap-3 text-sm">
+    <div className="flex flex-col gap-4 text-sm">
       <p
         className={`rounded px-2 py-1 text-xs font-semibold ${
           source === "fixture" ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"
@@ -125,32 +130,38 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
           : `Live Claude response${latencyMs !== undefined ? ` · ${(latencyMs / 1000).toFixed(1)} s` : ""}`}
       </p>
 
-      <div className={`rounded-md border-l-8 p-3 ${concern.className}`}>
-        <p className="text-lg font-bold">
-          <span aria-hidden="true">{concern.icon} </span>
-          {concern.title}
+      <div className={`rounded-lg border-l-[12px] px-5 py-5 ${concern.className}`}>
+        <p className="flex items-start gap-3 text-2xl font-bold leading-tight">
+          <span aria-hidden="true" className="shrink-0">
+            {concern.icon}
+          </span>
+          <span>{concern.title}</span>
         </p>
-        <p className="mt-1 text-xs">{concern.detail}</p>
-        <p className="mt-2">{data.summary}</p>
+        <p className="mt-2 text-xs">{concern.detail}</p>
+        <p className="mt-3 text-base leading-relaxed">{data.summary}</p>
       </div>
 
       <div className="rounded-md border-2 border-blue-800 bg-blue-50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-900">Suggested next step for clinician</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-blue-900">Recommended next step</p>
         <p className="mt-1 text-base font-semibold text-slate-900">{data.recommendedAction}</p>
       </div>
 
+      <hr className="border-slate-200" />
+
       <div>
-        <h3 className="font-semibold text-slate-900">Markers ({data.detectedMarkers.length})</h3>
+        <h3 className={sectionHeaderClass}>Findings ({data.detectedMarkers.length})</h3>
         {data.detectedMarkers.length === 0 ? (
-          <p className="text-slate-700">None identified against the supplied references.</p>
+          <p className="mt-1 text-slate-700">None identified against the supplied references.</p>
         ) : (
-          <ul className="mt-1 flex flex-col gap-2">
+          <ul className="mt-2 flex flex-col gap-2">
             {data.detectedMarkers.map((m, i) => (
-              <li key={i} className="rounded border border-slate-200 p-2">
-                <p className="font-medium text-slate-900">• {m.marker}</p>
-                <p className="text-slate-700">{m.explanation}</p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Intake evidence: <q>{stripQuotes(m.inputEvidence)}</q> · Source: {m.sourceIds.join(", ")}
+              <li key={i} className={`rounded border border-l-4 border-slate-200 py-2 pl-3 pr-2 ${concern.accent}`}>
+                <p className="font-semibold text-slate-900">{m.marker}</p>
+                <p className="leading-relaxed text-slate-700">{m.explanation}</p>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Intake evidence:{" "}
+                  <q className="rounded bg-slate-100 px-1 font-mono text-[11px] text-slate-800">{stripQuotes(m.inputEvidence)}</q>
+                  {" "}· Source: {m.sourceIds.join(", ")}
                 </p>
               </li>
             ))}
@@ -167,8 +178,8 @@ function DashboardBody({ state, canRetry, onRetry }: Props) {
       )}
 
       <div>
-        <h3 className="font-semibold text-slate-900">Limitations &amp; unknowns</h3>
-        <ul className="mt-1 list-disc pl-5 text-slate-700">
+        <h3 className={sectionHeaderClass}>Limitations &amp; unknowns</h3>
+        <ul className="mt-1 list-disc pl-5 text-xs leading-relaxed text-slate-500">
           {data.limitations.map((l, i) => (
             <li key={i}>{l}</li>
           ))}

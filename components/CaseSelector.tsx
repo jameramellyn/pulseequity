@@ -12,7 +12,7 @@ interface Props {
 export default function CaseSelector({ mode, activeCaseId, onSelect }: Props) {
   return (
     <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
-      <legend className="px-1 text-sm font-semibold text-slate-800">Synthetic cases</legend>
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Patient scenarios</legend>
       <p className="mb-3 text-xs text-slate-600">
         {mode === "live"
           ? "Selecting a case loads it into the form and sends it to live Claude immediately."

@@ -156,7 +156,7 @@ export default function Home() {
       <main className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
           <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
-            <legend className="px-1 text-sm font-semibold text-slate-800">Analysis mode</legend>
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Mode</legend>
             <div className="flex flex-wrap gap-4">
               {(
                 [
