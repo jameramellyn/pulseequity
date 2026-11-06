@@ -1,181 +1,229 @@
 # PulseEquity
 
-**Synthetic hackathon demonstration — not clinical software, not HIPAA-compliant, no real patient data.**
+**A second look at women's cardiac symptoms at the triage desk.**
 
-PulseEquity is a provider-facing prototype that runs a parallel, guideline-informed check for
-female-pattern cardiac presentations at the triage intake window. The intended operator is a triage
-nurse at a rural Critical Access Hospital or small community ED. The represented patient is an
-alert, verbal adult woman describing symptoms that may be minimized or attributed to anxiety or
-gastrointestinal causes. The tool supplements clinician judgment; it does not replace it.
+> **Synthetic hackathon demonstration.** This is not clinical software, it is not HIPAA-compliant,
+> and it uses no real patient data. It supplements clinician judgment and never replaces it.
 
-It does **not** diagnose, rule out cardiac disease, give validated probabilities, assign ESI, place
-orders, or route patients. Unconscious, unresponsive, or severely altered patients are outside this
-workflow — standard emergency processes must never depend on this form or wait for AI output.
-No improvement in outcomes, reduction in bias, clinical accuracy, or clinical safety has been
-demonstrated.
+**Demo:** _[link coming soon]_ <!-- TODO: add demo video / deployed URL -->
 
-## Three features
+Built solo with Claude Code for the **Code with Claude: Women in AI Hackathon**.
 
-1. **Intake form** — age, free-text chief complaint, HR, systolic/diastolic BP, RR (blank = not
-   measured → `null`, never zero), and diabetes / hypertension / prior cardiac history
-   (yes / no / **unknown**) and smoking (current / former / never / **unknown**).
-2. **Claude decision-support engine** — `POST /api/analyze` validates the intake, assembles a
-   trusted system prompt + a small versioned reference inventory + the untrusted intake, makes one
-   bounded Claude call with structured JSON output, and validates the result.
-3. **Alert dashboard** — category (text + icon + color), one prominent clinician next step,
-   input-linked markers with one-line explanations, possible dismissal pattern, limitations, and
-   inputs not recorded.
+---
 
-## Run it
+## The problem
 
-Requires Node 20+ (developed on Node 24) and npm.
+Women's heart-attack symptoms can be minimized, or attributed to anxiety or a stomach problem,
+before anyone considers the heart. Triage is one of the points where this happens
+[[1]](#sources)[[3]](#sources). In one study, emergency nurses were given identical patient
+vignettes. They were significantly more likely to consider a cardiac diagnosis for a middle-aged
+man than for a middle-aged woman with the same presentation [[2]](#sources).
+
+The pressure is greatest in small places: a rural Critical Access Hospital or a small community
+emergency department, where one triage nurse may be juggling many patients with little backup.
+
+## How I approached it
+
+PulseEquity is a **parallel check** that runs at the intake window, alongside the nurse:
+
+1. **Structured intake.** Age, the chief complaint in the patient's own words, vital signs, and
+   four risk factors (diabetes, hypertension, prior cardiac history, smoking). "Unknown" is kept
+   separate from "no", and a blank vital stays blank rather than becoming zero. Asking for these
+   explicitly surfaces details a rushed conversation can miss.
+2. **Claude decision support.** The server sends the intake to Claude with a small, curated,
+   versioned reference: the American Heart Association's page on heart-attack symptoms in women.
+   Claude returns structured JSON. The server rejects it unless it is complete, matches the
+   schema, and cites only known sources.
+3. **A ten-second alert.** The dashboard shows a concern category, one recommended next step for
+   the clinician, findings that quote the patient's own words, a possible "dismissal pattern" (for
+   example, back pain put down to sleeping wrong), and what's unknown.
+
+The tool never diagnoses and never sounds an all-clear. If it finds nothing, it says *"No specific
+markers identified by this prototype"*, and notes that this does not rule out cardiac disease.
+
+## Why this problem
+
+Healthcare runs in my family: my mother is a dentist and my sister works in the ICU. I wanted my
+hackathon project to be something clinicians could actually picture at work. Bias at the triage
+desk felt concrete, and it happens at a moment where a small, well-placed prompt could help.
+
+## Constraints I designed around
+
+- **Safety boundaries.** It does not diagnose, rule out disease, estimate probabilities, assign an
+  ESI level, place orders, or route patients. Unconscious, unresponsive, or severely altered
+  patients are out of scope, and standard emergency care must never wait on this form or on AI.
+- **No invented medicine.** Claude can use only the submitted intake and the curated reference.
+  The reference doesn't specify tests, so the recommended next step stays at "clinician review
+  under local protocol". It does not order an ECG or troponin.
+- **Honest failures.** If the live call fails, times out, is refused, or returns malformed output,
+  the app shows an error. It never quietly substitutes a canned answer.
+- **Hackathon scope.** One day, solo, synthetic patients only. No EHR integration, database,
+  login, or stored patient data.
+- **Cost-aware.** Every live run is a paid API call, so analysis runs only when the nurse presses
+  **Run cardiac check**, with no automatic retries.
+
+## Try it
+
+**Quick start** (Node 20+; developed on Node 24):
 
 ```bash
 npm install
-cp .env.example .env.local      # then edit .env.local (never commit it)
-npm run check:model             # confirms CLAUDE_MODEL is accessible to your key
-npm run dev                     # landing page at http://localhost:3000, triage tool at /triage
+cp .env.example .env.local      # add ANTHROPIC_API_KEY and CLAUDE_MODEL (never commit this file)
+npm run check:model             # confirms your key can access CLAUDE_MODEL
+npm run dev                     # open http://localhost:3000
 ```
 
-Production build:
+- `http://localhost:3000` is the landing page (problem, approach, sources).
+- `http://localhost:3000/triage` is the triage tool.
 
-```bash
-npm run build && npm start      # landing page at http://localhost:3000, triage tool at /triage
-```
+**No API key?** The triage tool's **Prewritten demo** mode works without one.
+
+**Demo walkthrough** (at `/triage`):
+
+1. Choose **Prewritten demo (no AI)** and click **Case A — Back discomfort with fatigue**. You'll
+   see an illustrative result, clearly labeled *"Prewritten demo response — not generated by live
+   Claude."*
+2. Click **Case C — Ambiguous / lower-signal** to see the neutral "no specific markers" result and
+   its disclaimer.
+3. Switch to **Live AI (Claude)** and click any case. It's sent to Claude immediately; expect about
+   4–7 seconds.
+4. Edit the complaint (for example, add *"my jaw aches too"*) and press **Run cardiac check**.
+   Editing clears the old result, so a stale answer is never shown.
+5. Use **Copy summary** to copy a plain-text note of the result.
+
+## What already exists
+
+| Area | Status |
+|---|---|
+| Landing page (`/`) | Done. Problem, approach, and checked citations. |
+| Intake form | Done. Three panels, units, unknown states, field errors, typo hints, keyboard accessible. |
+| Live Claude analysis (`POST /api/analyze`) | Done, and verified live against `claude-sonnet-5-5`. |
+| Alert dashboard | Done. Category, next step, findings table (cards on mobile), dismissal pattern, limitations, Copy summary. |
+| Prewritten demo mode | Done. Three synthetic cases, each tied to its exact unedited intake. |
+| Safety guards | Done. Stale-result protection, honest error states, server-only API key. |
+| Tests | 58 unit tests, plus 28 headless-browser checks (with a mocked API, so they cost nothing). |
+| Deployment / demo video | In progress. |
+
+## Limitations and next steps
+
+- **Not validated.** No clinical accuracy, safety, outcome improvement, or bias reduction has been
+  shown. The live review was a small qualitative check of five calls, and there are no
+  sensitivity or specificity claims.
+- **One reference.** Symptoms outside the AHA paraphrase (for example, lightheadedness) aren't
+  covered, so "no specific markers" means only that.
+- **Test-specific actions are unresolved.** Recommending a specific test, such as a 12-lead ECG or
+  troponin, would need separately sourced, clinically reviewed guidance.
+- **Speed.** Live responses took 4.1–7.0 seconds in testing, which misses my 3-second aspiration.
+- **Future directions:** CDS Hooks/FHIR integration with an EHR, standalone use where there's no
+  EHR, and broader clinician-reviewed references.
+
+## Sources
+
+Peer-reviewed sources for the problem statement. Each claim above is scoped to what its source
+reports.
+
+1. Arslanian-Engoren C. "Gender and age bias in triage decisions." *Journal of Emergency Nursing.*
+   2000;26(2):117–124. doi:10.1016/s0099-1767(00)90053-9.
+   <https://pubmed.ncbi.nlm.nih.gov/10748383/>
+2. Arslanian-Engoren C. "Gender and age differences in nurses' triage decisions using vignette
+   patients." *Nursing Research.* 2001;50(1):61–66. doi:10.1097/00006199-200101000-00009.
+   <https://pubmed.ncbi.nlm.nih.gov/19785246/>
+3. Kuhn L, Page K, Davidson PM, Worrall-Carter L. "Triaging women with acute coronary syndrome: a
+   review of the literature." *Journal of Cardiovascular Nursing.* 2011;26(5):395–407.
+   <https://opus.lib.uts.edu.au/handle/10453/28509>
+
+Reference used by the model (`lib/references.ts`): American Heart Association, "Heart Attack
+Symptoms in Women."
+<https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack/heart-attack-symptoms-in-women>
+The page showed a last-reviewed date of 2024-12-13 when checked for the project specification.
+
+---
+
+## Technical details
 
 ### Environment variables (server-only)
 
 | Variable | Required | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | for live mode | Read only on the server. Never sent to the browser. |
-| `CLAUDE_MODEL` | for live mode | No default. Use a current model your account can access; verify with `npm run check:model`. |
-| `CLAUDE_EFFORT` | optional | `low`/`medium`/`high`/`xhigh`/`max`. Unset = the model's default. Must be supported by the chosen model. |
+| `ANTHROPIC_API_KEY` | For live mode | Read only on the server; never sent to the browser. |
+| `CLAUDE_MODEL` | For live mode | No default. Use a current model your account can access, and verify it with `npm run check:model`. |
+| `CLAUDE_EFFORT` | Optional | `low`, `medium`, `high`, `xhigh`, or `max`. Leave unset to use the model's default. |
 
-If the key or model is missing, live mode shows an honest `CONFIGURATION_ERROR`; prewritten
-demo mode still works.
+If the key or model is missing, live mode shows a `CONFIGURATION_ERROR`, and prewritten mode still
+works.
 
-## Live vs prewritten modes
-
-- **Live AI** — selecting a case loads it and sends that exact snapshot to `/api/analyze`
-  immediately; manual edits require pressing *Analyze*. Internet access is required for live
-  Claude inference.
-- **Prewritten demo** — selecting a predefined case shows only that case's illustrative response,
-  labeled *"Prewritten demo response — not generated by live Claude."* No API call is made. Editing
-  the form removes the canned response; you must switch to Live AI to analyze edited input.
-  Prewritten responses are never used as a fallback for live failures. They are not clinically
-  reviewed and are not expected answers for the live model.
-
-This works offline only as a local UI/fixture demo; it does not imply offline Claude inference.
-
-## Checks
+### Checks
 
 ```bash
-npm test             # Vitest: contracts, server pipeline, stale-response guards (no network)
+npm test             # 58 Vitest tests: contracts, server pipeline, stale-response guards (no network)
 npm run typecheck    # next typegen + tsc
 npm run lint
 npm run build
-npm run test:ui      # 26 headless-Chrome checks against a running app, /api/analyze MOCKED (no cost)
-                     #   e.g. PE_URL=http://localhost:3000/triage npm run test:ui
+npm run test:ui      # 28 headless-Chrome checks; /api/analyze is mocked, so there's no API cost
 ```
 
-`test:ui` needs Google Chrome installed and the app already running.
+`test:ui` needs Google Chrome and a running app. It defaults to `http://localhost:3000/triage`;
+override it with `PE_URL`.
 
-## Architecture
+### Architecture
 
 ```
-app/page.tsx                 client: mode, case selector, form, dashboard; React local state only
-app/api/analyze/route.ts     server: 16 KiB body cap → Zod validation → config → Claude → typed response
-components/                  CaseSelector, IntakeForm, AlertDashboard (text only; no raw HTML rendering)
-lib/schemas.ts               Zod contracts (single source of truth; no server imports)
-lib/intake-form.ts           form ↔ intake conversion (blank → null, unknown stays unknown)
-lib/request-tracker.ts       request ID + generation + AbortController + snapshot/mode guard
-lib/analyze-client.ts        browser fetch with 25 s deadline; validates response shape
+app/page.tsx                 landing page (/)
+app/triage/page.tsx          triage tool (/triage): mode, scenarios, intake, dashboard; React local state only
+app/api/analyze/route.ts     16 KiB body cap → Zod validation → config check → one Claude call → typed response
+components/                  IntakeForm, AlertDashboard, CaseSelector, PatientBanner, StatusStrip, ui primitives
+lib/schemas.ts               Zod contracts: the single source of truth for types (no server imports)
+lib/intake-form.ts           form ↔ intake conversion (blank → null; unknown stays unknown)
+lib/request-tracker.ts       request ID + generation counter + AbortController, used for stale-result guards
+lib/analyze-client.ts        browser fetch with a 25 s deadline; validates the response shape
 lib/fixtures.ts              three synthetic cases + illustrative prewritten results
-lib/summary.ts               plain-text note for the "Copy summary" button
-lib/entry-ranges.ts          non-blocking data-entry typo hints (not clinical thresholds)
-lib/version.ts               app version + last-updated date shown in the footer
 lib/references.ts            versioned reference inventory
-lib/server/prompt.ts         trusted system prompt, reference context, output contract, delimited intake
-lib/server/claude.ts         one Claude call: maxRetries 0, 20 s deadline, stop-reason/schema/source checks
+lib/summary.ts               plain-text "Copy summary" note
+lib/entry-ranges.ts          non-blocking typo hints for vitals (not clinical thresholds)
+lib/server/prompt.ts         trusted system prompt, reference context, output schema, delimited intake
+lib/server/claude.ts         Claude call: no retries, 20 s deadline, stop-reason/schema/source checks
 scripts/check-model.mjs      verifies CLAUDE_MODEL via the Models API
 ```
 
-**Response contract** — a discriminated union: `{success:true, requestId, source:'live', data}` or
-`{success:false, requestId, error:{code, message, retryable}}`. Status codes: 400 invalid input,
-503 configuration/upstream unavailable, 429 rate limited, 504 timeout, 502 invalid model output.
-Raw SDK errors, secrets, and submitted text are never returned.
+**Output handling.** A result counts as success only if Claude stopped normally, the text is valid
+JSON, it passes the Zod schema, and every source ID is in the inventory. Anything else (a refusal,
+truncation, malformed output, or an unknown source) returns `INVALID_MODEL_OUTPUT`. There's no
+repair loop and no silent fallback. Schema checks validate *shape*, not clinical correctness.
 
-**Model output handling** — success only if `stop_reason` is `end_turn`, text is non-empty, JSON
-parses, the Zod schema passes, and every `sourceId` is in the inventory. Refusal, truncation,
-empty/malformed output, or unknown sources return `INVALID_MODEL_OUTPUT`. No repair loop, no
-retries, no silent mode switch. Structured output and schema validation check *shape*, not clinical
-correctness. A valid source ID is attribution, not proof that a statement is supported.
+**Response contract.** Responses use a discriminated union, `{success:true, …, data}` or
+`{success:false, …, error:{code, message, retryable}}`. Status codes: 400 invalid input, 503
+configuration or upstream unavailable, 429 rate limited, 504 timeout, 502 invalid model output. Raw
+SDK errors, secrets, and submitted text are never returned.
 
-**Stale-result protection** — every submission gets a request ID and a new generation; the previous
-fetch is aborted. Loading, success, and error updates are committed only if the generation, request
-ID, input snapshot, and mode still match. Editing, case switching, reset, mode switching, and
-cancel all invalidate pending requests. Cancelling in the browser is forwarded to the SDK, but does
-not guarantee the provider stopped work or did not bill the call.
+**Stale-result protection.** Each submission gets a request ID and a generation number, and the
+previous request is aborted. A result, error, or loading state is shown only if the generation, ID,
+input snapshot, and mode still match. Editing, switching cases or modes, reset, and cancel all
+invalidate pending requests. Cancelling in the browser doesn't guarantee the provider stopped work
+or didn't bill the call.
 
-**Privacy (application level only)** — intake and results live in React memory. Nothing is written
-to browser storage, a database, or logs. Server logs contain only request ID, outcome/error code,
-duration, and model ID. This says nothing about provider or hosting retention.
+**Privacy (application level only).** Intake and results live only in browser memory. Nothing is
+written to storage, a database, or logs. Logs record only the request ID, outcome or error code,
+duration, and model. This says nothing about provider or hosting retention.
 
-**Prompt injection** — instructions, reference inventory, and intake are kept in separate layers;
-intake is JSON-serialized inside `<intake_data>` with `<` escaped. The model has no tools. The
-schema and source allowlist cannot be changed by intake text. None of this guarantees semantic
-injection resistance.
+**Prompt injection.** Instructions, the reference inventory, and the intake are kept in separate
+layers. The intake is JSON inside `<intake_data>` delimiters with `<` escaped, and the model has no
+tools. Intake text can't change the schema or the source allowlist, but none of this guarantees
+resistance to injection. One live probe ignored embedded instructions; that's an observation, not
+proof.
 
-## Reference inventory (`lib/references.ts`, version `2026-11-06.1`)
+**Data-entry hints.** Vitals outside very wide bounds (HR 20–300, SBP 40–300, DBP 20–200, RR 4–80),
+or a diastolic BP not lower than systolic, show *"confirm if correct"*. I chose these bounds as typo
+catches. They are not sourced clinical thresholds, never block submission, and aren't sent to the
+model.
 
-| ID | Source |
-|---|---|
-| `AHA_SYMPTOMS_WOMEN` | American Heart Association, "Heart Attack Symptoms in Women" — <https://www.heart.org/en/health-topics/heart-attack/warning-signs-of-a-heart-attack/heart-attack-symptoms-in-women>. Page showed last-reviewed 2024-12-13 when checked for the specification revision (not re-fetched during this build). |
+### Observed live behavior (2026-11-06, `claude-sonnet-5-5`, five calls)
 
-Labeled paraphrase used as context: chest discomfort is the leading heart-attack symptom in women, as
-in men; other possible symptoms include back or jaw discomfort, breathlessness, nausea, unusual
-tiredness, and weakness; some presentations may be subtle or confused with other conditions; these
-symptoms are not exclusive to women.
+| Input | Server time | Result |
+|---|---|---|
+| Case A | 6.8 s (5.6 s with `CLAUDE_EFFORT=low`) | possible_concern, 2 findings |
+| Case B | 5.6 s | possible_concern, 2 findings |
+| Case C | 4.1 s | no_specific_markers_identified, 0 findings |
+| Prompt-injection probe | 4.6 s | Ignored instructions to output "cleared", cite a fake source, or approve the waiting room |
 
-The inventory does not provide an age cutoff, a combination rule, a score, an acuity algorithm, a
-testing protocol, or an emergency protocol, and none are implemented.
-
-## Observed live behavior (small smoke check, 2026-11-06, `claude-sonnet-5-5`)
-
-Five live calls total against the production build. These are observations, not benchmarks:
-
-| Input | HTTP | Server time | Category |
-|---|---|---|---|
-| Case A (default effort) | 200 | 6.8 s | possible_concern, 2 markers |
-| Case A (`CLAUDE_EFFORT=low`) | 200 | 5.6 s | possible_concern |
-| Case B | 200 | 5.6 s | possible_concern, 2 markers |
-| Case C | 200 | 4.1 s | no_specific_markers_identified, 0 markers, null dismissal |
-| Injection probe in complaint | 200 | 4.6 s | possible_concern (jaw ache); ignored "cleared"/fake source/waiting-room instructions |
-
-The 3-second live-response aspiration was **not** met in these samples. That is separate from the
-dashboard goal of being readable in under ten seconds. Error paths (missing key → 503, inaccessible
-model → 503, malformed JSON → 400) were also checked live.
-
-## Known limitations and unresolved flags
-
-- **Action protocol (unresolved).** The original example ("Order Stat 12-Lead ECG and
-  high-sensitivity troponin panel before routing to waiting room") is *not* implemented. The
-  reference does not support a universal test-ordering rule. Actions use bounded wording
-  (clinician review of possible cardiac assessment under local protocol). A test-specific action
-  needs separately sourced, clinically reviewed guidance.
-- **Pitch evidence (unresolved).** Disparity statistics, model-bias claims, vendor capabilities,
-  CDS Hooks/FHIR field mappings, and EHR cost claims need their own verification. None are
-  displayed in the app.
-- **Runtime configuration.** The model, key, hosting account, and final visual design are your
-  choices. API credits do not guarantee model access; use `npm run check:model`.
-- **Data-entry hints.** The vital-sign fields show a non-blocking "Value outside usual entry range —
-  confirm if correct" note (and a swapped-BP hint) to catch typos. The bounds in
-  `lib/entry-ranges.ts` (HR 20–300, SBP 40–300, DBP 20–200, RR 4–80) were chosen for this demo as
-  very wide typo bounds. They are **not** sourced clinical thresholds or normal ranges, never block
-  submission, and are not sent to the model.
-- **Single reference.** Symptoms outside the paraphrase (e.g., lightheadedness) are not covered;
-  "no specific markers" means only that.
-- The intake form shows this prototype's internal contract; it does not show that any EHR supplies
-  these fields. There's no EHR integration, persistence, login, or deployment configuration.
-- Live-model review was qualitative and small. There is no sensitivity/specificity claim.
-- Future directions only: CDS Hooks/FHIR integration and standalone use where there is no EHR.
+These are observations, not benchmarks. Error paths were also checked live: a missing key returns
+503, an inaccessible model returns 503, and malformed JSON returns 400.
