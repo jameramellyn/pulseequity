@@ -1,12 +1,10 @@
 # PulseEquity
 
-[![PulseEquity preview](Screenshot 2026-11-06 at 20.30.09.png)](https://www.loom.com/share/ca7d1e52ee224f918e9de1ed5be428b1)
+[![PulseEquity preview](<Screenshot 2026-11-06 at 20.30.09.png>)](https://www.loom.com/share/ca7d1e52ee224f918e9de1ed5be428b1)
+
+**[Watch the demo video](https://www.loom.com/share/ca7d1e52ee224f918e9de1ed5be428b1)**
+
 **A second look at women's cardiac symptoms at the triage desk.**
-
-> **Synthetic hackathon demonstration.** This is not clinical software, it is not HIPAA-compliant,
-> and it uses no real patient data. It supplements clinician judgment and never replaces it.
-
-**Demo:** _[link coming soon]_ <!-- TODO: add demo video / deployed URL -->
 
 Built solo with Claude Code for the **Code with Claude: Women in AI Hackathon**.
 
